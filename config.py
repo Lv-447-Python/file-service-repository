@@ -1,6 +1,8 @@
 import os
-basedir = os.path.abspath(os.path.dirname(__file__))
 
+from file_service import app
+
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
