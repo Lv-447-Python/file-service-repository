@@ -24,5 +24,5 @@ migrate = Migrate(app, db)
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
-from file_service.models.file import File
-from file_service.views import index  
+#from file_service.models.file import File
+from file_service.views import routes # routes for our service 
