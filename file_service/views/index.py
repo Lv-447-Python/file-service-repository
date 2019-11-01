@@ -1,42 +1,32 @@
-from file_service import app, db
-
-from file_service.models.file import File
-
-from sqlalchemy.orm import sessionmaker
-
+import os
+from werkzeug.utils import secure_filename, redirect
 from flask.views import MethodView
+from flask import jsonify, request, render_template
 
-from flask import jsonify
+ALLOWED_EXTENSIONS = set(['csv', 'xls', 'xlsx'])
 
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 class FileLoading(MethodView):
-    #TODO Create doc string for class description
+    # TODO Create doc string for class description
 
     def get(self):
-        return '<h1>Test</h1>'
+        return render_template('index.html')
 
     def post(self):
-        return jsonify({
-            'Name': 'Benis',
-            'Comment': 'Haha',
-            'Is it working?': 'X----------D'
-        })
-    
+        # check if the post request has the file part
+        if 'filename' not in request.files:
+            return redirect(request.url)
+        file = request.files['filename']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            return redirect(request.url)
+        file.save(os.path.join('.', file.filename))
+        return f'Uploaded {file.filename}'
+
     def __str__(self):
         return 'Class FileLoading - initilized'
-
-
-
-# @app.route('/')
-# def index():
-
-#     db.create_all()
-#     db.session.add(File('name', 'path', 'meta'))
-
-#     result = File.query.all()
-
-#     for row in result:
-#         print(row.file_name + '\t|\t' + row.file_path + '\t|\t' + row.file_meta)
-
-#     return '<h1>Test</h1>'
