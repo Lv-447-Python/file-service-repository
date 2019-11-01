@@ -16,4 +16,4 @@ def index():
     for row in result:
         print(row.file_name + '\t|\t' + row.file_path + '\t|\t' + row.file_meta)
 
-    return '<h1>HAHA BENIS X---------DDDDDDDDDDD</h1>'
+    return '<h1>Test</h1>'
