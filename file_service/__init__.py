@@ -13,10 +13,12 @@ POSTGRES = {
 
 app = Flask(__name__, template_folder='templates')
 app.debug = True
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://%(user)s:\
 %(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = '/home/alex/test'
+app.config['UPLOAD_FOLDER'] = 'files/'
 
 db = SQLAlchemy(app)
 
