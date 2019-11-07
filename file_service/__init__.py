@@ -1,4 +1,6 @@
 from flask import Flask
+from flask_marshmallow import Marshmallow
+from flask_restful import Api
 from flask_script import Manager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
@@ -12,6 +14,8 @@ POSTGRES = {
 }
 
 app = Flask(__name__, template_folder='templates')
+api = Api(app)
+
 app.debug = True
 
 
@@ -21,11 +25,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'files/'
 
 db = SQLAlchemy(app)
-
+ma = Marshmallow(app)
 migrate = Migrate(app, db)
 
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
 # from file_service.models.file import File
-from file_service.views import routes  # routes for our service
+from file_service.views.index import FileLoading
