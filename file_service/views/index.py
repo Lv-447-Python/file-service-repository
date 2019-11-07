@@ -1,11 +1,13 @@
 import os
 
-from file_service import app, db
-from file_service.models.file import File
-
+from flask import jsonify, request, render_template, session
+from flask_restful import Resource
 from werkzeug.utils import secure_filename, redirect
 from flask.views import MethodView
-from flask import jsonify, request, render_template, session
+from file_service import app, db, api
+from file_service.models.file import File
+
+from file_service.serializers.file_schema import FileSchema
 
 import hashlib
 import datetime
@@ -41,20 +43,21 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-class FileLoading(MethodView): 
+class FileLoading(Resource): 
 
     @staticmethod
     def generate_hash(file_content):
 
+        print(file_content)
         try:
-            content = str(file_content)
+            file_content = str(file_content)
         except TypeError as e:
             print('File Content should be byte array string, \n', e)
             return
 
         sha256_hash = hashlib.sha256()                # create instance of sha256 algorithm from hashlib
 
-        piece_size  = 65536                           # amount of bits which will be read for 1 iteration
+        piece_size  = 4096                            # amount of bits which will be read for 1 iteration
 
         byte_line   = file_content.read(piece_size)   # read file content as bytes
 
@@ -92,12 +95,14 @@ class FileLoading(MethodView):
 
     def get(self):
 
-       
-        return render_template('index.html')
+        return jsonify({'haha': 'benis'})
 
     def post(self):
 
         # check if the post request has the file part
+
+        
+
         if 'filename' not in request.files:
             return redirect(request.url)
         file = request.files['filename']
@@ -109,7 +114,14 @@ class FileLoading(MethodView):
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
-        file_size = len(file.read())          
+        print(file.read())
+
+        file.stream.seek(0)
+
+        file_size = len(file.read())    
+
+        file.stream.seek(0)
+
         file_hash = FileLoading.generate_hash(file)
 
 
@@ -138,3 +150,4 @@ class FileLoading(MethodView):
 
     def __str__(self):
         return 'Class FileLoading - initilized'
+
