@@ -1,15 +1,5 @@
 import os
 
-<<<<<<< HEAD
-from flask import jsonify, request, render_template, session
-from flask_restful import Resource
-from werkzeug.utils import secure_filename, redirect
-from flask.views import MethodView
-from file_service import app, db, api
-from file_service.models.file import File
-
-from file_service.serializers.file_schema import FileSchema
-=======
 from flask_api import status
 from flask_restful import Resource
 
@@ -19,7 +9,6 @@ from file_service.serializers.file_schema import FileSchema
 
 from werkzeug.utils import secure_filename, redirect
 from flask import jsonify, request, render_template, session
->>>>>>> origin/draft_resources
 
 import hashlib
 import datetime
@@ -52,18 +41,9 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-<<<<<<< HEAD
-class FileLoading(Resource): 
-
-    @staticmethod
-    def generate_hash(file_content):
-
-        print(file_content)
-=======
 class FileLoading(Resource):
     @staticmethod
     def generate_hash(file_content):
->>>>>>> origin/draft_resources
         try:
             file_content = str(file_content)
         except TypeError as e:
@@ -74,14 +54,10 @@ class FileLoading(Resource):
         piece_size = 65536  # amount of bits which will be read for 1 iteration
         byte_line = file_content.read(piece_size)  # read file content as bytes
 
-<<<<<<< HEAD
-        piece_size  = 4096                            # amount of bits which will be read for 1 iteration
-=======
         while len(byte_line) > 0:  # means it's not the end of the file
             sha256_hash.update(byte_line)  # update hash for every piece_size
             byte_line = file_content.read(piece_size)  # update value
         return sha256_hash.hexdigest()  # return hash value
->>>>>>> origin/draft_resources
 
     @staticmethod
     def check_for_unique(file_hash, file_size):
@@ -102,16 +78,14 @@ class FileLoading(Resource):
 
     # TODO Create doc string for class description
     def get(self):
-<<<<<<< HEAD
-
-        return jsonify({'haha': 'benis'})
-=======
         return status.HTTP_200_OK
->>>>>>> origin/draft_resources
 
     def post(self):
         # check if the post request has the file part
 
+        file = request.files['File']
+        print(file)
+        return jsonify({'data': 'haha'})
         
 
         if 'filename' not in request.files:
@@ -122,19 +96,8 @@ class FileLoading(Resource):
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
-<<<<<<< HEAD
-        print(file.read())
-
-        file.stream.seek(0)
-
-        file_size = len(file.read())    
-
-        file.stream.seek(0)
-
-=======
         file_size = len(file.read())
         file.stream.seek(0)
->>>>>>> origin/draft_resources
         file_hash = FileLoading.generate_hash(file)
         file.stream.seek(0)  # move pointer to the start of the file
         filename = secure_filename(file.filename)
@@ -152,13 +115,8 @@ class FileLoading(Resource):
         db.session.add(input_file)
         db.session.commit()
 
-        return 'Success'
+        
 
     def __str__(self):
         return 'Class FileLoading - initilized'
 
-<<<<<<< HEAD
-=======
-
-api.add_resource(FileLoading, "/")
->>>>>>> origin/draft_resources

@@ -1,9 +1,5 @@
 from flask import Flask
 from flask_marshmallow import Marshmallow
-<<<<<<< HEAD
-=======
-from flask_restful import Api
->>>>>>> origin/draft_resources
 from flask_script import Manager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
@@ -31,14 +27,10 @@ app.config['UPLOAD_FOLDER'] = 'files/'
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/draft_resources
 migrate = Migrate(app, db)
 
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
 # from file_service.models.file import File
-from file_service.views.index import FileLoading
+from file_service.views import routes
