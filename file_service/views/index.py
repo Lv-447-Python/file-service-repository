@@ -71,12 +71,11 @@ class FileLoading(Resource):
             possible_files_hashes = [file_instance.file_hash for file_instance in possible_files]  # get hashes of all possible files
             if binary_search(sorted(possible_files_hashes), file_hash):  # if we found file with such hash
                 exist_file = [existed for existed in File.query.filter_by(file_hash=file_hash)]  # get the existed file
-                print('//////////////////////////////////', exist_file[0])
                 return exist_file[0].file_path  # get it's physical file path
             else:
                 return True  # file is unique
-        print(possible_files_hashes)
 
+        #TODO Create logger config
 
     @staticmethod
     def generate_meta(file_instance):
@@ -98,9 +97,17 @@ class FileLoading(Resource):
         return [filename, file_size, file_hash, file_path]
 
     def get(self):
-        return status.HTTP_200_OK
+        file_schema = FileSchema(many=True)
 
+        all_files = File.query.all()
 
+        result = file_schema.dump(all_files) 
+
+        return jsonify({
+            'all files': result,
+            'status': status.HTTP_200_OK
+        })
+ 
 
     def post(self):
         print('in post')
@@ -118,11 +125,14 @@ class FileLoading(Resource):
 
         input_file = File(*meta)
 
+        file_schema = FileSchema()
+
         db.session.add(input_file)
         db.session.commit()
 
         return jsonify({
-            'meta': [element for element in meta]
+            'data': file_schema.dump(input_file),
+            'status': status.HTTP_200_OK    
         })
 
 
@@ -130,4 +140,4 @@ class FileLoading(Resource):
 
     def __str__(self):
         return 'Class FileLoading - initilized'
-
+        
