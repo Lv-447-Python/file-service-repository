@@ -10,6 +10,9 @@ from file_service.serializers.file_schema import FileSchema
 from werkzeug.utils import secure_filename, redirect
 from flask import jsonify, request, render_template, session
 
+from sqlalchemy import exc
+
+import requests 
 import hashlib
 import datetime
 
@@ -80,6 +83,7 @@ class FileLoading(Resource):
     @staticmethod
     def generate_meta(file_instance):
         file_size = len(file_instance.read())
+        #TODO rewrite with 1 object
         file_instance.stream.seek(0)
         file_hash = FileLoading.generate_hash(file_instance)
         file_instance.stream.seek(0)  # move pointer to the start of the file
@@ -112,9 +116,9 @@ class FileLoading(Resource):
     def post(self):
         print('in post')
         # check if the post request has the file part
-        if 'fileloading' not in request.files:
+        if 'userfile' not in request.files:
             return redirect(request.url)
-        file = request.files['fileloading']
+        file = request.files['userfile']
 
         # if user does not select file, browser also
         # submit a empty part without filename
@@ -129,7 +133,7 @@ class FileLoading(Resource):
 
         db.session.add(input_file)
         db.session.commit()
-
+        print(input_file.id)
         return jsonify({
             'data': file_schema.dump(input_file),
             'status': status.HTTP_200_OK    
@@ -140,4 +144,46 @@ class FileLoading(Resource):
 
     def __str__(self):
         return 'Class FileLoading - initilized'
+
+
+class FileInterface(FileLoading):
+
+    def get(self):
+
+        result = None #
+        path   = ''   # Response base values to return
+        msg    = ''   #
+
+        requested_id = request.args.get('file_id', type=int)               # get id from request arguments
+
+        if requested_id >= 1:                                              # id should be positive ofc
+            resulted_file = File.query.filter_by(id=requested_id).first()  # get file from DB with requested if
+
+
+            if resulted_file is not None:                                  # if file found
+                path = resulted_file.file_path                             # get path of founded file
+                msg  = 'Succes'                                            # custom msg
+
+                result = jsonify({                                         # result with arguments and status code 
+                    'path': path,
+                    'msg': msg,
+                    'status': status.HTTP_200_OK })                        #----------------------------------------
+            else:
+                msg = 'File with such id not found'                        # otherwise msg
+
+                result = jsonify({                                         # result when file is not found
+                    'path': path,
+                    'msg': msg,
+                    'status': status.HTTP_200_OK })
+        else:
+            msg = 'There is no files with such id'
+
+            result = jsonify({
+                'path': path,
+                'msg': msg,
+                'status': status.HTTP_200_OK })                            #----------------------------------------
+
+        return result   # RESPONSE
+            
+
         
