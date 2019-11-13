@@ -15,6 +15,7 @@ from sqlalchemy import exc
 import requests 
 import hashlib
 import datetime
+import csv
 
 FILE_SCHEMA = FileSchema()
 ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
@@ -44,7 +45,25 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+
+def extract_filters(file):
+    filters = []
+    
+    try:
+        with open(file) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+
+            for row in csv_reader:
+                filters.append([single_filter for single_filter in row])
+                break
+    except Exception:
+        print('Error with file')
+
+    return filters
+
+
 class FileLoading(Resource):
+    
     @staticmethod
     def generate_hash(file_content):
         try:
@@ -81,7 +100,7 @@ class FileLoading(Resource):
         #TODO Create logger config
 
     @staticmethod
-    def generate_meta(file_instance):
+    def generate_meta_and_filters(file_instance):
         file_size = len(file_instance.read())
         #TODO rewrite with 1 object
         file_instance.stream.seek(0)
@@ -98,7 +117,17 @@ class FileLoading(Resource):
         else:
             file_path = is_unique
 
-        return [filename, file_size, file_hash, file_path]
+        filters = extract_filters(file_path)
+
+        return ([filename, file_size, file_hash, file_path], filters)
+
+    @staticmethod
+    def add_file_to_db(file):
+        if not isinstance(file, File):
+            raise TypeError('In order to add file to db, input value should be instance of File model.')
+        
+        db.session.add(file)
+        db.session.commit()
 
     def get(self):
         file_schema = FileSchema(many=True)
@@ -114,7 +143,6 @@ class FileLoading(Resource):
  
 
     def post(self):
-        print('in post')
         # check if the post request has the file part
         if 'userfile' not in request.files:
             return redirect(request.url)
@@ -125,18 +153,24 @@ class FileLoading(Resource):
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
-        meta = FileLoading.generate_meta(file)
+        meta = FileLoading.generate_meta_and_filters(file)
 
-        input_file = File(*meta)
+        input_file = File(*meta[0])
 
         file_schema = FileSchema()
 
-        db.session.add(input_file)
-        db.session.commit()
-        print(input_file.id)
+        FileLoading.add_file_to_db(input_file) # add and commit file to DB
+
         return jsonify({
             'data': file_schema.dump(input_file),
-            'status': status.HTTP_200_OK    
+            'filters': meta[1],
+            'status': status.HTTP_201_CREATED   
+        })
+
+
+    def put(self):
+        return jsonify({
+            'msg': 'test'
         })
 
 
@@ -148,6 +182,15 @@ class FileLoading(Resource):
 
 class FileInterface(FileLoading):
 
+    @staticmethod
+    def delete_file_from_db(file):
+        if not isinstance(file, File):
+            raise TypeError('file should be instance of File model class')
+        
+        db.session.delete(file)
+        db.session.commit()
+
+
     def get(self):
 
         result = None #
@@ -157,7 +200,7 @@ class FileInterface(FileLoading):
         requested_id = request.args.get('file_id', type=int)               # get id from request arguments
 
         if requested_id >= 1:                                              # id should be positive ofc
-            resulted_file = File.query.filter_by(id=requested_id).first()  # get file from DB with requested if
+            resulted_file = File.query.filter_by(id=requested_id).first()  # get file from DB with requested id
 
 
             if resulted_file is not None:                                  # if file found
@@ -173,17 +216,44 @@ class FileInterface(FileLoading):
 
                 result = jsonify({                                         # result when file is not found
                     'path': path,
-                    'msg': msg,
-                    'status': status.HTTP_200_OK })
+                    'err': msg,
+                    'status': status.HTTP_404_NOT_FOUND })
         else:
             msg = 'There is no files with such id'
 
             result = jsonify({
                 'path': path,
-                'msg': msg,
-                'status': status.HTTP_200_OK })                            #----------------------------------------
+                'err': msg,  
+                'status': status.HTTP_404_NOT_FOUND})                      #----------------------------------------
 
         return result   # RESPONSE
-            
 
+
+    def delete(self):
+
+        result = None
+        msg    = ''
+
+        file_to_delete_id     = request.get('file_id', type=int)
+
+        file_to_delete_object = File.query.filter_by(id=file_to_delete_id).first()
+
+        if file_to_delete_object is not None:
+            msg = 'file successfuly deleted'
+
+            FileInterface.delete_file_from_db(file_to_delete_object)
+
+            result = jsonify({
+                'msg': msg,
+                'status': status.HTTP_200_OK
+            })
         
+        else:
+            msg = 'file with such id not found'
+
+            result = jsonify({
+                'msg': msg,
+                'status': status.HTTP_404_NOT_FOUND
+            })
+
+        return result

@@ -13,28 +13,46 @@ from flask import jsonify, request, render_template, session
 import requests
 import hashlib
 import datetime
+import csv
+
+
+
 
 class FileFiltering(Resource):
-
+ 
     def get(self):
+
         return jsonify({
-            'haha': 'benis'
+            'msg': 'GET'
         })
 
     def post(self):
         
-        # hardcode mode: ON
-        current_file_id = 23
-        current_filters = {'color': 'red'}
+        # if 'filefilter' not in request.files:
+        #     return redirect(request.url)
+        # file = request.files['filefilter']
 
-        data = {
-            'id': current_file_id,
-            'filters': current_filters
-        }
+        # # if user does not select file, browser also
+        # # submit a empty part without filename
+        # if file.filename == '' or not allowed_file(file.filename):
+        #     return redirect(request.url)
 
+
+        form_data = request.form
+
+
+        #valentin_url = '127.0.0.1:5000/'
+        #response = requests.put(valentin_url, data=jsonify(form_data))
+        
+
+        #filters = extract_filters(file)
  
-        return None
+        return jsonify({
+            'form-data': form_data,
+            'status': status.HTTP_200_OK
+        })
 
 
+  
 
     #TODO create resource hah
