@@ -1,7 +1,11 @@
+"""Model for file service."""
 from file_service import db
 
 
 class File(db.Model):
+    """
+    This module demonstrates database table file by class.
+    """
     __tablename__ = 'file'
 
     id = db.Column(db.Integer, primary_key=True)
