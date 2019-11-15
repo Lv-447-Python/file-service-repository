@@ -10,12 +10,15 @@ from file_service.serializers.file_schema import FileSchema
 from werkzeug.utils import secure_filename, redirect
 from flask import jsonify, request, render_template, session
 
+
 from sqlalchemy import exc
 
 import requests 
 import hashlib
 import datetime
 import csv
+
+from requests.exceptions import HTTPError
 
 FILE_SCHEMA = FileSchema()
 ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
@@ -50,11 +53,12 @@ def extract_filters(file):
     filters = []
     
     try:
-        with open(file) as csv_file:
+        with open(file, 'r') as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
-
+            
             for row in csv_reader:
-                filters.append([single_filter for single_filter in row])
+                for single_filter in row:
+                    filters.append(single_filter)
                 break
     except Exception:
         print('Error with file')
@@ -64,6 +68,7 @@ def extract_filters(file):
 
 class FileLoading(Resource):
     
+
     @staticmethod
     def generate_hash(file_content):
         try:
@@ -137,7 +142,7 @@ class FileLoading(Resource):
         result = file_schema.dump(all_files) 
 
         return jsonify({
-            'all files': result,
+            'all_files': result,
             'status': status.HTTP_200_OK
         })
  
@@ -161,20 +166,30 @@ class FileLoading(Resource):
 
         FileLoading.add_file_to_db(input_file) # add and commit file to DB
 
-        return jsonify({
-            'data': file_schema.dump(input_file),
-            'filters': meta[1],
-            'status': status.HTTP_201_CREATED   
-        })
+
+        filters = meta[1]
+        data    = file_schema.dump(input_file)
 
 
-    def put(self):
-        return jsonify({
-            'msg': 'test'
-        })
+        try:
+            file_filtering_url = 'http://127.0.0.1:5000/filtering'
+
+            request_data = {'file_id': data['id'], 'filters': filters}
+
+            file_filtering_response = requests.get(file_filtering_url, request_data)
+        except HTTPError as err:
+            print('*'*50, 'ERRRORR:', err)
 
 
- 
+
+        if True:
+            return jsonify({
+                'data': data,
+                'filters': filters,
+                'file_filtering_response': file_filtering_response.text,
+                'status': status.HTTP_201_CREATED   
+            })
+        
 
     def __str__(self):
         return 'Class FileLoading - initilized'
