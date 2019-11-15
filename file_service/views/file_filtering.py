@@ -14,6 +14,7 @@ import requests
 import hashlib
 import datetime
 import csv
+import pandas as pd
 
 
 from requests.exceptions import HTTPError
@@ -23,10 +24,10 @@ from file_service.views.index import extract_filters
 
 
 class FileFiltering(Resource):
-
+    
     @staticmethod
     def get_filtered_data(file_path, test_filter):
-        
+        pass
     
 
     def get(self):
@@ -45,18 +46,18 @@ class FileFiltering(Resource):
         })
 
     def put(self):
-        requested_data = request.form
+        requested_data    = request.form
 
-        current_file_id = request.args.get('file_id')
+        current_file_id   = request.args.get('file_id')
 
-        current_file_path = requests.get(f'http://127.0.0.1:5000/file?file_id={current_file_id}')['path']
+        current_file_path = requests.get(f'http://127.0.0.1:5000/file?file_id={current_file_id}').json()['path']
 
         filters = extract_filters(current_file_path)
 
-
+        
 
         return jsonify({
-            'filter_values': requested_data,
+            'filtered_values': requested_data,
             'filters': filters,
             'status': status.HTTP_200_OK
         })
