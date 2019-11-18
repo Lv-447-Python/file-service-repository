@@ -106,12 +106,14 @@ class FileLoading(Resource):
 
     @staticmethod
     def generate_meta_and_filters(file_instance):
-        file_size = len(file_instance.read())
-        #TODO rewrite with 1 object
-        file_instance.stream.seek(0)
-        file_hash = FileLoading.generate_hash(file_instance)
-        file_instance.stream.seek(0)  # move pointer to the start of the file
-        filename = secure_filename(file_instance.filename)
+
+        current_file = file_instance.read()
+
+        file_size = len(current_file)
+        
+        file_hash = FileLoading.generate_hash(current_file)
+
+        filename  = secure_filename(file_instance.filename)
 
         file_path = ''
 
@@ -249,7 +251,7 @@ class FileInterface(FileLoading):
         result = None
         msg    = ''
 
-        file_to_delete_id     = request.get('file_id', type=int)
+        file_to_delete_id     = request.args.get('file_id', type=int)
 
         file_to_delete_object = File.query.filter_by(id=file_to_delete_id).first()
 

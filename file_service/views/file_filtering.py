@@ -10,10 +10,12 @@ from file_service.serializers.file_schema import FileSchema
 from werkzeug.utils import secure_filename, redirect
 from flask import jsonify, request, render_template, session
 
+import csv
 import requests
 import hashlib
 import datetime
 import csv
+import json
 import pandas as pd
 
 
@@ -26,8 +28,28 @@ from file_service.views.index import extract_filters
 class FileFiltering(Resource):
     
     @staticmethod
-    def get_filtered_data(file_path, test_filter):
-        pass
+    def filter_dataset(file_path, filters_dict):
+        try:
+            df = pd.read_csv(file_path, dtype=str)
+
+            df.columns = [cols.capitalize() for cols in df]
+
+            current_query = ''
+
+            for key in filters_dict:
+                if filters_dict[key] != '':
+                    current_query += """ and """ if current_query != '' else ''
+                    current_query += """{0} == '{1}'""".format(str(key), str(filters_dict[key]))
+
+
+            filtered   = df.query(current_query) if current_query != '' else df
+
+            result     = filtered.to_json(orient='index')
+
+            # print(result)    
+            return result
+        except Exception as err:
+            print('Smth gone wrong, ', err)
     
 
     def get(self):
@@ -54,11 +76,14 @@ class FileFiltering(Resource):
 
         filters = extract_filters(current_file_path)
 
-        
+        result  = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
+
+        # print(result)
 
         return jsonify({
             'filtered_values': requested_data,
             'filters': filters,
+            'result': result,
             'status': status.HTTP_200_OK
         })
 
@@ -89,13 +114,3 @@ class FileFiltering(Resource):
             'file_id': current_file_id,
             'form_data': form_data,
             'status': status.HTTP_200_OK })
-    
-
-    
-   
-
-
-
-  
-
-    #TODO create resource hah
