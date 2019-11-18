@@ -10,7 +10,7 @@ from file_service.serializers.file_schema import FileSchema
 from werkzeug.utils import secure_filename, redirect
 from flask import jsonify, request, render_template, session
 
-import csv
+
 import requests
 import hashlib
 import datetime
@@ -45,8 +45,7 @@ class FileFiltering(Resource):
             filtered   = df.query(current_query) if current_query != '' else df
 
             result     = filtered.to_json(orient='index')
-
-            # print(result)    
+   
             return result
         except Exception as err:
             print('Smth gone wrong, ', err)
@@ -78,8 +77,6 @@ class FileFiltering(Resource):
 
         result  = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
 
-        # print(result)
-
         return jsonify({
             'filtered_values': requested_data,
             'filters': filters,
@@ -91,23 +88,6 @@ class FileFiltering(Resource):
         
         form_data = request.form
 
-
-        # #valentin_url = '127.0.0.1:5000/'
-        # #response = requests.put(valentin_url, data=jsonify(form_data))
-        
-
-        # #filters = extract_filters(file)
-
-        # filtered_rows_id = FileFiltering.filter_by_values(form_data) 
-
-        # try:
-        #     history_url = 'http://127.0.0.1:5000/'
-        #     put_rows_id_to_history_response = requests.put(history_url, data=filtered_rows_id)
-        # except HTTPError as err:
-        #     print('Error, can not save your filters: ', err)
-
-        
-        # if put_rows_id_to_history_response.status_code == 200:
         current_file_id = request.args.get('file_id')
 
         return jsonify({

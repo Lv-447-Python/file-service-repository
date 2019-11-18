@@ -7,5 +7,3 @@ from file_service.views.myviewer import MyViewer
 api.add_resource(FileLoading, '/')
 api.add_resource(FileInterface, '/file')
 api.add_resource(FileFiltering, '/filtering')
-
-app.add_url_rule('/viewer', view_func=MyViewer.as_view('viewer'))

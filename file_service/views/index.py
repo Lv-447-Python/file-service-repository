@@ -77,41 +77,40 @@ class FileLoading(Resource):
             print('File Content should be byte array string, \n', e)
             return
 
-        sha256_hash = hashlib.sha256()               # create instance of sha256 algorithm from hashlib
-        piece_size  = 65536                          # amount of bits which will be read for 1 iteration
-        byte_line   = file_content.read(piece_size)  # read file content as bytes
+        sha256_hash = hashlib.sha256()              
+        piece_size  = 65536                          
+        byte_line   = file_content.read(piece_size)
 
-        while len(byte_line) > 0:                    # means it's not the end of the file
-            sha256_hash.update(byte_line)            # update hash for every piece_size
-            byte_line = file_content.read(piece_size)  # update value
-        return sha256_hash.hexdigest()                 # return hash value
+        while len(byte_line) > 0:                   
+            sha256_hash.update(byte_line)         
+            byte_line = file_content.read(piece_size) 
+        return sha256_hash.hexdigest()                 
 
     @staticmethod
     def check_for_unique(file_hash, file_size):
 
         possible_files = [file_instance for file_instance in
-                          File.query.filter_by(file_size=file_size)]  # get all files with such file_size
+                          File.query.filter_by(file_size=file_size)] 
 
-        if len(possible_files) == 0:  # means this file is unique
+        if len(possible_files) == 0:  
             return True
         else:
-            possible_files_hashes = [file_instance.file_hash for file_instance in possible_files]  # get hashes of all possible files
-            if binary_search(sorted(possible_files_hashes), file_hash):  # if we found file with such hash
-                exist_file = [existed for existed in File.query.filter_by(file_hash=file_hash)]  # get the existed file
-                return exist_file[0].file_path  # get it's physical file path
+            possible_files_hashes = [file_instance.file_hash for file_instance in possible_files]  
+            if binary_search(sorted(possible_files_hashes), file_hash): 
+                exist_file = [existed for existed in File.query.filter_by(file_hash=file_hash)]  
+                return exist_file[0].file_path 
             else:
-                return True  # file is unique
+                return True  
 
-        #TODO Create logger config
 
     @staticmethod
     def generate_meta_and_filters(file_instance):
 
-        current_file = file_instance.read()
+        file_size = len(file_instance.read())
 
-        file_size = len(current_file)
+        file_instance.stream.seek(0)
         
-        file_hash = FileLoading.generate_hash(current_file)
+        file_hash = FileLoading.generate_hash(file_instance)
 
         filename  = secure_filename(file_instance.filename)
 
@@ -150,13 +149,11 @@ class FileLoading(Resource):
  
 
     def post(self):
-        # check if the post request has the file part
+        
         if 'userfile' not in request.files:
             return redirect(request.url)
         file = request.files['userfile']
 
-        # if user does not select file, browser also
-        # submit a empty part without filename
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
@@ -166,31 +163,18 @@ class FileLoading(Resource):
 
         file_schema = FileSchema()
 
-        FileLoading.add_file_to_db(input_file) # add and commit file to DB
+        FileLoading.add_file_to_db(input_file) 
 
 
         filters = meta[1]
         data    = file_schema.dump(input_file)
 
 
-        try:
-            file_filtering_url = 'http://127.0.0.1:5000/filtering'
-
-            request_data = {'file_id': data['id'], 'filters': filters}
-
-            file_filtering_response = requests.get(file_filtering_url, request_data)
-        except HTTPError as err:
-            print('*'*50, 'ERRRORR:', err)
-
-
-
-        if True:
-            return jsonify({
-                'data': data,
-                'filters': filters,
-                'file_filtering_response': file_filtering_response.text,
-                'status': status.HTTP_201_CREATED   
-            })
+        return jsonify({
+            'data': data,
+            'filters': filters,
+            'status': status.HTTP_201_CREATED   
+        })
         
 
     def __str__(self):
@@ -210,28 +194,28 @@ class FileInterface(FileLoading):
 
     def get(self):
 
-        result = None #
-        path   = ''   # Response base values to return
-        msg    = ''   #
+        result = None 
+        path   = ''   
+        msg    = ''   
 
-        requested_id = request.args.get('file_id', type=int)               # get id from request arguments
+        requested_id = request.args.get('file_id', type=int)
 
-        if requested_id >= 1:                                              # id should be positive ofc
-            resulted_file = File.query.filter_by(id=requested_id).first()  # get file from DB with requested id
+        if requested_id >= 1:                                              
+            resulted_file = File.query.filter_by(id=requested_id).first()  
 
 
-            if resulted_file is not None:                                  # if file found
-                path = resulted_file.file_path                             # get path of founded file
-                msg  = 'Succes'                                            # custom msg
+            if resulted_file is not None:                                  
+                path = resulted_file.file_path                             
+                msg  = 'Success'                                           
 
-                result = jsonify({                                         # result with arguments and status code 
+                result = jsonify({                                         
                     'path': path,
                     'msg': msg,
-                    'status': status.HTTP_200_OK })                        #----------------------------------------
+                    'status': status.HTTP_200_OK })                        
             else:
-                msg = 'File with such id not found'                        # otherwise msg
+                msg = 'File with such id not found'                        
 
-                result = jsonify({                                         # result when file is not found
+                result = jsonify({ 
                     'path': path,
                     'err': msg,
                     'status': status.HTTP_404_NOT_FOUND })
@@ -241,9 +225,9 @@ class FileInterface(FileLoading):
             result = jsonify({
                 'path': path,
                 'err': msg,  
-                'status': status.HTTP_404_NOT_FOUND})                      #----------------------------------------
+                'status': status.HTTP_404_NOT_FOUND})                     
 
-        return result   # RESPONSE
+        return result   
 
 
     def delete(self):
