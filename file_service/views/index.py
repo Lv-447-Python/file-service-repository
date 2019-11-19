@@ -49,17 +49,18 @@ def allowed_file(filename):
 
 
 
-def extract_filters(file):
+def extract_filters(file_path):
     filters = []
     
+    print('before try')
     try:
-        with open(file, 'r') as csv_file:
+        print('in try')
+        with open(file_path) as csv_file:
+            print('in with')
             csv_reader = csv.reader(csv_file, delimiter=',')
             
-            for row in csv_reader:
-                for single_filter in row:
-                    filters.append(single_filter)
-                break
+            filters = list(csv_reader)[0]
+            
     except Exception:
         print('Error with file')
 
@@ -112,6 +113,8 @@ class FileLoading(Resource):
         
         file_hash = FileLoading.generate_hash(file_instance)
 
+        file_instance.stream.seek(0)
+
         filename  = secure_filename(file_instance.filename)
 
         file_path = ''
@@ -123,7 +126,9 @@ class FileLoading(Resource):
         else:
             file_path = is_unique
 
+        print(file_path)
         filters = extract_filters(file_path)
+        print(filters)
 
         return ([filename, file_size, file_hash, file_path], filters)
 
@@ -198,7 +203,7 @@ class FileInterface(FileLoading):
         path   = ''   
         msg    = ''   
 
-        requested_id = request.args.get('file_id', type=int)
+        requested_id = request.args.get('file_id', type=int)  
 
         if requested_id >= 1:                                              
             resulted_file = File.query.filter_by(id=requested_id).first()  
