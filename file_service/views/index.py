@@ -52,14 +52,12 @@ def allowed_file(filename):
 def extract_filters(file_path):
     filters = []
     
-    print('before try')
     try:
-        print('in try')
         with open(file_path) as csv_file:
-            print('in with')
+
             csv_reader = csv.reader(csv_file, delimiter=',')
             
-            filters = list(csv_reader)[0]
+            filters = [filter.capitalize() for filter in list(csv_reader)[0]]
             
     except Exception:
         print('Error with file')
