@@ -4,5 +4,5 @@ from file_service.views.index import FileLoading, FileInterface
 from file_service.views.file_filtering import FileFiltering
 
 api.add_resource(FileLoading, '/')
-api.add_resource(FileInterface, '/file')
-api.add_resource(FileFiltering, '/filtering')
+api.add_resource(FileInterface, '/file/<int:file_id>')
+api.add_resource(FileFiltering, '/filtering/<int:file_id>')

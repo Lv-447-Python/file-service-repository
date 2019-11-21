@@ -7,3 +7,4 @@ from file_service.models.file import File
 class FileSchema(ma.ModelSchema):
     class Meta:
         model = File
+

@@ -4,6 +4,10 @@ from flask_script import Manager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s: %(name)s | %(levelname)s: %(message)s')
 
 POSTGRES = {
     'user': 'postgres',

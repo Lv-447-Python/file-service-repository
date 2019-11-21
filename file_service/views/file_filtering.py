@@ -8,7 +8,7 @@ from file_service.models.file import File
 from file_service.serializers.file_schema import FileSchema
 
 from werkzeug.utils import secure_filename, redirect
-from flask import jsonify, request, render_template, session
+from flask import jsonify, request, session, make_response
 
 
 import requests
@@ -20,7 +20,7 @@ import pandas as pd
 
 
 from requests.exceptions import HTTPError
-
+from file_service import logging
 
 from file_service.views.index import extract_filters
 
@@ -41,56 +41,96 @@ class FileFiltering(Resource):
                     current_query += """ and """ if current_query != '' else ''
                     current_query += """{0} == '{1}'""".format(str(key), str(filters_dict[key]))
 
+            logging.info(f'Will be filtered by query: \n{current_query}\n')
 
             filtered   = df.query(current_query) if current_query != '' else df
 
             result     = filtered.to_json(orient='index')
-   
+
             return result
-        except Exception as err:
-            print('Smth gone wrong, ', err)
+        except ValueError:
+            logging.error(f'Error to read file as csv by path: {file_path}')
     
 
-    def get(self):
-        current_file_id      = request.args.get('file_id')
+    def get(self, file_id):
 
-        current_file_path    = requests.get(f'http://127.0.0.1:5000/file?file_id={current_file_id}').json()['path']
+        file_response = requests.get(f'http://127.0.0.1:5000/file/{file_id}')
 
-        current_file_filters = extract_filters(current_file_path)
+        if file_response.status_code == 200:
+            current_file_path    = file_response.json()['path']
+            current_file_filters = extract_filters(current_file_path)
 
+            response = make_response(
+                jsonify({
+                    'file_id': file_id,
+                    'file_path': current_file_path,
+                    'filters': current_file_filters,
+                }),
+                status.HTTP_200_OK
+            )
 
-        return jsonify({
-            'file_id': current_file_id,
-            'file_path': current_file_path,
-            'filters': current_file_filters,
-            'status': status.HTTP_200_OK
-        })
+        else:
+            response = make_response(
+                jsonify({'error': 'File not found'}),
+                status.HTTP_404_NOT_FOUND
+            )
 
-    def put(self):
-        requested_data    = request.form
+        return response
 
-        current_file_id   = request.args.get('file_id')
+    def put(self, file_id):
+        requested_data = request.form
 
-        current_file_path = requests.get(f'http://127.0.0.1:5000/file?file_id={current_file_id}').json()['path']
+        current_file_response = requests.get(f'http://127.0.0.1:5000/file/{file_id}')
 
-        filters = extract_filters(current_file_path)
+        if current_file_response.status_code == 200:
+            current_file_path = current_file_response.json()['path']
 
-        result  = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
+            filters = extract_filters(current_file_path)
 
-        return jsonify({
-            'filtered_values': requested_data,
-            'filters': filters,
-            'result': result,
-            'status': status.HTTP_200_OK
-        })
+            result  = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
 
-    def post(self):
+            response = make_response(
+                jsonify({
+                    'filtered_values': requested_data,
+                    'filters': filters,
+                    'result': result
+                }),
+                status.HTTP_200_OK
+            )
+        else:
+            response = make_response(
+                jsonify({
+                    'error': 'File not found'
+                }),
+                status.HTTP_404_NOT_FOUND
+            )
+
+        return response
+
+    def post(self, file_id):
         
         form_data = request.form
 
-        current_file_id = request.args.get('file_id')
+        # TODO here will be implemented a logic of saving filtered data
 
-        return jsonify({
-            'file_id': current_file_id,
-            'form_data': form_data,
-            'status': status.HTTP_200_OK })
+        current_file_response = requests.get(f'http://127.0.0.1:5000/file/{file_id}')
+
+        if current_file_response.status_code == 200:
+            response = make_response(
+                jsonify({
+                    'file_id': file_id,
+                    'filtered_values': form_data
+                }),
+                status.HTTP_200_OK
+            )
+        else:
+            response = make_response(
+                jsonify({
+                    'error': 'File not found'
+                }),
+                status.HTTP_404_NOT_FOUND
+            )
+
+        return response
+
+
