@@ -1,9 +1,11 @@
+# TODO: Create test case for filtering endpoint.
+
 import io
 import json
 import logging
+import unittest
 
 from file_service import app, db
-import unittest
 
 POSTGRES = {
     'user': 'postgres',
@@ -28,7 +30,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_base_service(self):
         response = self.app.get('/')
-        assert response.status == '200 OK'
+        self.assertEqual(response.status, '200 OK')
 
     def test_upload_file_using_string(self):
         test_data = b'Hello,World,Test,Flask'
@@ -37,8 +39,8 @@ class MyTestCase(unittest.TestCase):
                                  content_type='multipart/form-data',
                                  data={'user_file': (io.BytesIO(test_data), 'test.csv')})
         testing_data = json.loads(response.data)
-        assert string.join(testing_data["filters"]) == test_data.decode('utf-8')
-        assert response.status == '201 CREATED'
+        self.assertEqual(string.join(testing_data["filters"]), test_data.decode('utf-8'))
+        self.assertEqual(response.status, '201 CREATED')
 
     def test_upload_file_using_file(self):
         with open('files_for_test/Test_dataset_filterMe.csv', 'rb') as file_test:
@@ -47,27 +49,31 @@ class MyTestCase(unittest.TestCase):
         with io.BytesIO(binary_file_test) as testing_file:
             response = self.app.post('/',
                                      content_type='multipart/form-data',
-                                     data={'user_file': (testing_file, 'test1.csv')})
+                                     data={'user_file': (testing_file, 'Test_dataset_filterMe.csv')})
 
-        assert response.status == '201 CREATED'
-
-    def test_hash_and_size(self):
-        pass
+        self.assertEqual(response.status, '201 CREATED')
 
     def test_find_file(self):
-        pass
+        response = self.app.get('/')
+        get_all_id = list(map(lambda all_id: all_id["id"], json.loads(response.data)['all_files']))
+        for id in get_all_id:
+            response_id = self.app.get('/file/' + str(id))
+            self.assertEqual(response_id.status, '200 OK')
+        self.assertEqual(response.status, '200 OK')
 
     def test_delete_file(self):
-        pass
+        with open('files_for_test/Test_dataset_filterMe.csv', 'rb') as file_test:
+            binary_test_file = file_test.read()
+        with io.BytesIO(binary_test_file) as testing_file:
+            response = self.app.post('/',
+                                     content_type='multipart/form-data',
+                                     data={'user_file': (testing_file, 'file_for_delete.csv')})
+        self.assertEqual(response.status, '201 CREATED')
+        response_delete = self.app.delete('/file/' + str(json.loads(response.data)['data']['id']))
+        self.assertEqual(response_delete.status, '200 OK')
+        response_delete = self.app.delete('/file/' + str(json.loads(response.data)['data']['id']))
+        self.assertEqual(response_delete.status, '404 NOT FOUND')
 
-    def test_read_data_from_file(self):
-        pass
-
-    def test_read_column_names_in_data(self):
-        pass
-
-    def test_filter_data(self):
-        pass
 
 
 if __name__ == '__main__':
