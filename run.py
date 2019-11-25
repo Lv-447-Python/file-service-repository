@@ -1,6 +1,9 @@
 """Initial Point of starting File Service"""
 
-from file_service import app
+from file_service import APP
+
+from file_service.views.index import FileLoading, FileInterface
+from file_service.views.file_filtering import FileFiltering
 
 if __name__ == "__main__":
-    app.run()
+    APP.run()

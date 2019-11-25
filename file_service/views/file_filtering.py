@@ -1,70 +1,120 @@
-import os
-
-from flask_api import status
-from flask_restful import Resource
-
-from file_service import app, db, api
-from file_service.models.file import File
-from file_service.serializers.file_schema import FileSchema
-
-from werkzeug.utils import secure_filename, redirect
-from flask import jsonify, request, session, make_response
-
-
 import requests
-import hashlib
-import datetime
-import csv
 import json
 import pandas as pd
 
+from flask import jsonify, request, make_response
+from flask_api import status
+from flask_restful import Resource
 
-from requests.exceptions import HTTPError
+from file_service import API
 from file_service import logging
+from file_service.views.index import extract_headers
 
-from file_service.views.index import extract_filters
+from functools import reduce
 
 
 class FileFiltering(Resource):
-    
+    """Resource class for filtering loaded dataset"""
+
     @staticmethod
-    def filter_dataset(file_path, filters_dict):
+    def simple_query(data_frame, key, query_string):
+        resulted_rows = data_frame.query("""{0} == '{1}'""".format(key, query_string))
+
+        return resulted_rows
+
+    @staticmethod
+    def parse_part(string):
+
+        count_start = string.find('{')
+        count_end   = string.find('}')
+
+        if count_start == -1 or count_end == -1:
+            return string
+
+        value = string[:count_start]
+
+        amount = string[count_start + 1:count_end]
+
+        is_percent = amount.find('%')
+
+        if is_percent != -1:
+            numb = amount[:is_percent]
+        else:
+            numb = amount
+
+        return value, int(numb), is_percent != - 1
+
+    @staticmethod
+    def parse_request_filter(filter_query):
+        is_complex = filter_query.find('&')
+
+        if is_complex == -1:
+            result = FileFiltering.parse_part(filter_query)
+        else:
+            result = [FileFiltering.parse_part(filter_value) for filter_value in filter_query.split('&')]
+
+        return result
+
+    @staticmethod
+    def filter_dataset(file_path, requested_form):
+        """Function for filtering dataset by requested form values"""
         try:
-            df = pd.read_csv(file_path, dtype=str)
+            data_frame = pd.read_csv(file_path, dtype=str)
 
-            df.columns = [cols.capitalize() for cols in df]
+            data_frame.columns = [cols.capitalize() for cols in data_frame]
 
-            current_query = ''
+            data_frame_size = data_frame.shape[0]
 
-            for key in filters_dict:
-                if filters_dict[key] != '':
-                    current_query += """ and """ if current_query != '' else ''
-                    current_query += """{0} == '{1}'""".format(str(key), str(filters_dict[key]))
+            indexes = [data_frame.index]
 
-            logging.info(f'Will be filtered by query: \n{current_query}\n')
+            for key in requested_form:
+                if requested_form[key] != '':
+                    query_parts = FileFiltering.parse_request_filter(requested_form[key])
 
-            filtered   = df.query(current_query) if current_query != '' else df
+                    if isinstance(query_parts, str):
+                        resulted_rows = FileFiltering.simple_query(data_frame, key, query_parts)
 
-            result     = filtered.to_json(orient='index')
+                        indexes.append(resulted_rows.index)
+                    else:
+                        partials = []
+                        for part in query_parts:
+                            if isinstance(part, str):
+                                resulted_rows = FileFiltering.simple_query(data_frame, key, part)
 
-            return result
+                                partials.append(resulted_rows)
+                            else:
+                                value, count, is_percent = part
+
+                                rows_count = count if not is_percent else int(count * data_frame_size / 100)
+
+                                partials.append(data_frame.query("""{0} == '{1}'""".format(key, value))[:rows_count])
+
+                        if len(partials) > 0:
+                            indexes.append(pd.concat(partials).index)
+
+
+            final_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+
+            return data_frame.loc[final_indexes].to_json(orient='index')
+
         except ValueError:
             logging.error(f'Error to read file as csv by path: {file_path}')
-    
+
+
 
     def get(self, file_id):
 
         file_response = requests.get(f'http://127.0.0.1:5000/file/{file_id}')
 
         if file_response.status_code == 200:
-            current_file_path    = file_response.json()['path']
-            current_file_filters = extract_filters(current_file_path)
+            current_file_path = file_response.json()['path']
+            current_file_headers = extract_headers(current_file_path)
 
             response = make_response(
                 jsonify({
                     'file_id': file_id,
                     'file_path': current_file_path,
-                    'filters': current_file_filters,
+                    'headers': current_file_headers,
                 }),
                 status.HTTP_200_OK
             )
@@ -85,9 +135,9 @@ class FileFiltering(Resource):
         if current_file_response.status_code == 200:
             current_file_path = current_file_response.json()['path']
 
-            filters = extract_filters(current_file_path)
+            filters = extract_headers(current_file_path)
 
-            result  = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
+            result = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
 
             response = make_response(
                 jsonify({
@@ -110,7 +160,6 @@ class FileFiltering(Resource):
     def post(self, file_id):
         
         form_data = request.form
-
         # TODO here will be implemented a logic of saving filtered data
 
         current_file_response = requests.get(f'http://127.0.0.1:5000/file/{file_id}')
@@ -134,3 +183,4 @@ class FileFiltering(Resource):
         return response
 
 
+API.add_resource(FileFiltering, '/filtering/<int:file_id>')

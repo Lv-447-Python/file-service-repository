@@ -1,29 +1,25 @@
+"""Initial point in file service"""
 import os
+import hashlib
+import csv
 
+from flask import jsonify, request, make_response
 from flask_api import status
 from flask_restful import Resource
 
-from file_service import app, db, api
+from werkzeug.utils import secure_filename, redirect
+
+from file_service import APP, DB, API
 from file_service.models.file import File
 from file_service.serializers.file_schema import FileSchema
-
-from werkzeug.utils import secure_filename, redirect
-from flask import jsonify, request, render_template, session, make_response
-
-from sqlalchemy import exc
-
-import requests
-import hashlib
-import datetime
-import csv
-from requests.exceptions import HTTPError
 from file_service import logging
 
-FILE_SCHEMA = FileSchema()
+
 ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
 
 
 def binary_search(file_hashes, hash_value):
+    """Binary search algorithm in order to identify if file with such content already in DB"""
     if type(file_hashes) not in (tuple, list) or type(hash_value) != str:
         raise TypeError('Type Error: file_hashes should be iterable object (list/tuple)\n\
                                      hash_value should be string')
@@ -46,10 +42,12 @@ def binary_search(file_hashes, hash_value):
 
 
 def allowed_file(filename):
+    """Function for checking file extension"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def extract_filters(file_path):
+def extract_headers(file_path):
+    """Function for extracting filters from file by it's path"""
     filters = []
 
     try:
@@ -68,9 +66,16 @@ def extract_filters(file_path):
 
 
 class FileLoading(Resource):
+    """
+    Resource for working with files
+    methods:
+        GET:  localhost:/files ==> return all files meta-data
+        POST: localhost:/files ==> (with request file) load file to DB and show user meta-data and headers
+    """
 
     @staticmethod
     def generate_hash(file_content):
+        """Function for generating hash value based on file content"""
         sha256_hash = hashlib.sha256()
         piece_size  = 65536
         byte_line   = ''
@@ -91,13 +96,14 @@ class FileLoading(Resource):
 
     @staticmethod
     def check_for_unique(file_hash, file_size):
+        """Function to identify if file is unique"""
 
         possible_files = [file_instance for file_instance in
                           File.query.filter_by(file_size=file_size)]
 
         if len(possible_files) == 0:
             logging.info('File is unique')
-            return True
+            result = True
         else:
             possible_files_hashes = [file.file_hash for file in possible_files]
             if binary_search(sorted(possible_files_hashes), file_hash):
@@ -105,13 +111,16 @@ class FileLoading(Resource):
 
                 logging.info(f'File already in DB, so set with path: {exist_file[0].file_path}')
 
-                return exist_file[0].file_path
+                result = exist_file[0].file_path
             else:
                 logging.info('File is unique')
-                return True
+                result = True
+
+        return result
 
     @staticmethod
-    def generate_meta_and_filters(file_instance):
+    def generate_meta_and_headers(file_instance):
+        """Function for generating meta-data and headers of loaded dataset"""
 
         file_size = len(file_instance.read())
 
@@ -123,22 +132,23 @@ class FileLoading(Resource):
         is_unique = FileLoading.check_for_unique(file_hash, file_size)
 
         if is_unique:
-            file_path = app.config['UPLOAD_FOLDER'] + filename
-            file_instance.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file_path = APP.config['UPLOAD_FOLDER'] + filename
+            file_instance.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
         else:
             file_path = is_unique
 
-        filters = extract_filters(file_path)
+        headers = extract_headers(file_path)
 
-        return [filename, file_size, file_hash, file_path], filters
+        return [filename, file_size, file_hash, file_path], headers
 
     @staticmethod
     def add_file_to_db(file):
+        """Function for adding file to database"""
         if not isinstance(file, File):
-            raise TypeError('In order to add file to db, input value should be instance of File model.')
+            raise TypeError('file should be a File instance.')
 
-        db.session.add(file)
-        db.session.commit()
+        DB.session.add(file)
+        DB.session.commit()
 
     def get(self):
         file_schema = FileSchema(many=True)
@@ -162,7 +172,7 @@ class FileLoading(Resource):
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
-        meta        = FileLoading.generate_meta_and_filters(file)
+        meta        = FileLoading.generate_meta_and_headers(file)
 
         input_file  = File(*meta[0])
 
@@ -184,64 +194,80 @@ class FileLoading(Resource):
         return 'Class FileLoading - initilized'
 
 
-def decorate_specific_operation(operation):
-    def file_finding_handler(resource_method):
-        def wrapper(*args, **kwargs):
 
-            file = resource_method(args, kwargs['file_id'])
+def file_finding_handler(resource_method):
+    """Decorator for handling exceptions in resource methods"""
+    def wrapper(*args, **kwargs):
+        response = resource_method(args, kwargs['file_id'])
 
-            if file is not None:
-                if operation == 'GET':
-                    result = make_response(
-                        jsonify({
-                            'path': file.file_path,
-                            'message': 'Success'
-                        }),
-                        status.HTTP_200_OK
-                    )
+        not_found_response = make_response(
+            jsonify({
+                'error': 'File with such id not found'
+            }),
+            status.HTTP_404_NOT_FOUND
+        )
 
-                if operation == 'DELETE':
-                    FileInterface.delete_file_from_db(file)
+        return response if response is not None else not_found_response
 
-                    result = make_response(
-                        jsonify({
-                            'msg': 'File successfully deleted'
-                        }),
-                        status.HTTP_200_OK
-                    )
-            else:
-                result = make_response(
-                    jsonify({
-                        'msg': 'File with such id not found'
-                    }),
-                    status.HTTP_404_NOT_FOUND)
-
-            return result
-
-        return wrapper
-    return file_finding_handler
+    return wrapper
 
 
 class FileInterface(FileLoading):
+    """
+    Resource for working with single file
+    methods:
+        GET:  localhost:/file/<file_id:int> ==> return file path by requested file_id
+        PUT:  localhost:/file/<file_id:int> ==> filter data frame by requested form values
+        POST: localhost:/file/<file_id:int> ==> save filtered data frame and requested form values
+    """
 
     @staticmethod
     def delete_file_from_db(file):
+        """Function for deleting file from database"""
         if not isinstance(file, File):
-            raise TypeError('file should be instance of File model class')
+            logging.error('file is not instance of File model')
+            raise TypeError
 
-        db.session.delete(file)
-        db.session.commit()
+        DB.session.delete(file)
+        DB.session.commit()
 
-    @decorate_specific_operation('GET')
+    @file_finding_handler
     def get(self, file_id):
 
         requested_file = File.query.filter_by(id=file_id).first()
 
-        return requested_file
+        try:
+            result = make_response(
+                jsonify({
+                    'path': requested_file.file_path,
+                    'message': 'Success'
+                }),
+                status.HTTP_200_OK
+            )
+            return result
 
-    @decorate_specific_operation('DELETE')
+        except AttributeError:
+            logging.error(f'File with id: {file_id}, not found')
+            return None
+
+    @file_finding_handler
     def delete(self, file_id):
 
         requested_file_to_delete = File.query.filter_by(id=file_id).first()
 
-        return requested_file_to_delete
+        try:
+            FileInterface.delete_file_from_db(requested_file_to_delete)
+
+            result = make_response(
+                jsonify({
+                    'message': 'Success, file deleted'
+                }),
+                status.HTTP_200_OK)
+
+            return result
+        except TypeError:
+            return None
+
+
+API.add_resource(FileLoading, '/files')
+API.add_resource(FileInterface, '/file/<int:file_id>')

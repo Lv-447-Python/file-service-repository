@@ -1,14 +1,17 @@
-from flask import Flask
+"""
+Module for initialization basic modules and instances for whole project
+"""
+import logging
 from flask_marshmallow import Marshmallow
 from flask_script import Manager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
-import logging
+from flask import Flask
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s: %(name)s | %(levelname)s: %(message)s')
-
+# in common library !!!
 POSTGRES = {
     'user': 'postgres',
     'pw': '02082001',
@@ -17,23 +20,18 @@ POSTGRES = {
     'port': '5432',
 }
 
-app = Flask(__name__, template_folder='templates')
-api = Api(app)
+APP = Flask(__name__)
 
-app.debug = True
+API = Api(APP)
 
-api = Api(app)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://%(user)s:\
+APP.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://%(user)s:\
 %(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'files/'
+APP.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+APP.config['UPLOAD_FOLDER'] = 'files/'
 
-db = SQLAlchemy(app)
-ma = Marshmallow(app)
-migrate = Migrate(app, db)
+DB = SQLAlchemy(APP)
+MA = Marshmallow(APP)
 
-manager = Manager(app)
-manager.add_command('db', MigrateCommand)
-
-from file_service.views import routes
+MIGRATE = Migrate(APP, DB)
+MANAGER = Manager(APP)
+MANAGER.add_command('db', MigrateCommand)

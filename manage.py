@@ -1,4 +1,4 @@
-from file_service import manager
+from file_service import MANAGER
 
 if __name__ == '__main__':
-    manager.run()
+    MANAGER.run()
