@@ -35,3 +35,4 @@ MA = Marshmallow(APP)
 MIGRATE = Migrate(APP, DB)
 MANAGER = Manager(APP)
 MANAGER.add_command('db', MigrateCommand)
+from file_service.models.file import File
