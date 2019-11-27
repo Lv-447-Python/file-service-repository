@@ -56,7 +56,7 @@ class FileFiltering(Resource):
         return result
 
     @staticmethod
-    def filter_dataset(file_path, requested_form):
+    def filter_dataset(file_path, headers, requested_form):
         """Function for filtering dataset by requested form values"""
         try:
             data_frame = pd.read_csv(file_path, dtype=str)
@@ -67,39 +67,55 @@ class FileFiltering(Resource):
 
             indexes = [data_frame.index]
 
-            for key in requested_form:
-                if requested_form[key] != '':
-                    query_parts = FileFiltering.parse_request_filter(requested_form[key])
+            for header in headers:
+                resulted_str = ''
 
-                    if isinstance(query_parts, str):
-                        resulted_rows = FileFiltering.simple_query(data_frame, key, query_parts)
+                for key in requested_form:
+                    if header in key:
+                        is_value = 'value' in key
+                        try:
+                            if is_value:  # input with value
+                                if resulted_str:
+                                    resulted_str += '&'
 
-                        indexes.append(resulted_rows.index)
-                    else:
-                        partials = []
-                        for part in query_parts:
-                            if isinstance(part, str):
-                                resulted_rows = FileFiltering.simple_query(data_frame, key, part)
+                                resulted_str += requested_form[key]
+                            else:  # input with count
+                                resulted_str += '{' + requested_form[key] + '}'
+                        except ValueError as e:
+                            print(e)
 
-                                partials.append(resulted_rows)
-                            else:
-                                value, count, is_percent = part
+                if resulted_str == '': continue
+                query_parts = FileFiltering.parse_request_filter(resulted_str)
 
-                                rows_count = count if not is_percent else int(count * data_frame_size / 100)
+                if isinstance(query_parts, str):
 
-                                partials.append(data_frame.query("""{0} == '{1}'""".format(key, value))[:rows_count])
+                    key_result_indexes = data_frame.query("""{0} == '{1}'""".format(header, query_parts)).index
+                    indexes.append(set(key_result_indexes))
+                else:
+                    partials = []
+                    for part in query_parts:
 
-                        if len(partials) > 0:
-                            indexes.append(pd.concat(partials).index)
+                        if isinstance(part, str):
 
+                            key_result_indexes = data_frame.query("""{0} == '{1}'""".format(header, part))
 
-            final_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+                            partials.append(key_result_indexes)
+                        else:
+                            value, count, is_percent = part
+                            rows_count = count if not is_percent else int(count * data_frame_size / 100)
 
-            return data_frame.loc[final_indexes].to_json(orient='index')
+                            key_result_indexes = data_frame.query("""{0} == '{1}'""".format(header, value))[:rows_count]
+                            partials.append(key_result_indexes)
+
+                    if len(partials) > 0:
+                        indexes.append(set(pd.concat(partials).index))
+
+            resulted_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+
+            return data_frame.loc[resulted_indexes].to_json(orient='index')
 
         except ValueError:
             logging.error(f'Error to read file as csv by path: {file_path}')
-
 
 
     def get(self, file_id):
@@ -135,14 +151,13 @@ class FileFiltering(Resource):
         if current_file_response.status_code == 200:
             current_file_path = current_file_response.json()['path']
 
-            filters = extract_headers(current_file_path)
+            headers = extract_headers(current_file_path)
 
-            result = json.loads(FileFiltering.filter_dataset(current_file_path, requested_data))
+            result = json.loads(FileFiltering.filter_dataset(current_file_path, headers, requested_data))
 
             response = make_response(
                 jsonify({
                     'filtered_values': requested_data,
-                    'filters': filters,
                     'result': result
                 }),
                 status.HTTP_200_OK
