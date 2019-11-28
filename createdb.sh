@@ -1,2 +1,1 @@
-#!/usr/bin/env bash
-createdb -U postgres statcrutch
+bash -c "createdb -U postgres statcrutch"
