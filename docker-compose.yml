@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    ports:
+      - "4000:5432"
+    volumes:
+      - ./createdb.sh:/docker-entrypoint-initdb.d/init.sh
+  web:
+    build: .
+    command: python run.py
+    volumes:
+      - .:/file_service
+    ports:
+      - "4100:5000"
+  migration:
+    build: .
+    command: >
+      /bin/bash -c "
+        sleep 5;
+        python manage.py db upgrade"
+    volumes:
+      - .:/file_service
+    links:
+      - db
+    depends_on:
+      - db
