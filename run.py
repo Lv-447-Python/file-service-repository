@@ -6,4 +6,4 @@ from file_service.views.index import FileLoading, FileInterface
 from file_service.views.file_filtering import FileFiltering
 
 if __name__ == "__main__":
-    APP.run()
+    APP.run(host='0.0.0.0')
