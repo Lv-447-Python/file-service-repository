@@ -14,9 +14,9 @@ logging.basicConfig(level=logging.INFO,
 # in common library !!!
 POSTGRES = {
     'user': 'postgres',
-    'pw': '02082001',
+    'pw': '',
     'db': 'statcrutch',
-    'host': '127.0.0.1',
+    'host': 'db',
     'port': '5432',
 }
 
