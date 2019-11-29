@@ -1,41 +1,30 @@
-.PHONY: help setup db_migrate run test lint
+.PHONY: help setup init_db run test lint
 
 VENV_NAME?=env
 PYTHON=${VENV_NAME}/bin/python3
+MIGRATION_FOLDER?=migrations
 
-.DEFAULT: help
-help:
-	@echo "make setup"
-	@echo "       full "
-	@echo "make run"
-	@echo "       run project"
-	@echo "make lint"
-	@echo "       run pylint and mypy"
-	@echo "make test"
-	@echo "       run tests"
-
-
-setup: $(VENV_NAME)/bin/activate 
+setup: $(VENV_NAME)/bin/activate
 $(VENV_NAME)/bin/activate: requirements.txt
-	test -d $(VENV_NAME) || virtualenv -p python3 $(VENV_NAME)
+	make clean
+	test -d $(VENV_NAME) || python3 -m virtualenv $(VENV_NAME)
+	mkdir files
 	${PYTHON} -m pip install -U pip
 	${PYTHON} -m pip install -r requirements.txt
-	mkdir files
-	touch $(VENV_NAME)/bin/activate
-	make db_migrate
-	${PYTHON} manage.py db upgrade
-	${PYTHON} manage.py db migrate
+	make init_db
 
-db_migrate: $(VENV_NAME)/bin/activate
+clean:
+	rm -rf $(VENV_NAME) $(MIGRATE_FOLDER)
+
+init_db:
+	createdb -U postgres statcrutch
 	${PYTHON} manage.py db init
 	${PYTHON} manage.py db upgrade
 	${PYTHON} manage.py db migrate
+	${PYTHON} manage.py db upgrade
 
-run: $(VENV_NAME)/bin/activate
-	${PYTHON} run.py
+lint:
+	${PYTHON} -m pylint file_service
 
 test:
-	echo "Will be soon..."
-
-lint: $(VENV_NAME)/bin/activate
-	$(PYTHON) -m pylint file_service
+	${PYTHON} -m pytest tests/BaseTest.py
