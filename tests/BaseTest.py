@@ -1,5 +1,4 @@
-# NOTE: Don't run it via IDE, but on terminal!
-
+# NOTE: Set your working directory to file-service-repository!
 import io
 import json
 import unittest
