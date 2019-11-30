@@ -3,14 +3,15 @@ import os
 import hashlib
 import csv
 
+from functools import wraps
+
 from flask import jsonify, request, make_response
 from flask_api import status
 from flask_restful import Resource
 
 from werkzeug.utils import secure_filename, redirect
 
-from file_service import APP, DB, API
-from file_service.models.file import File
+from file_service import APP, DB, API, File
 from file_service.serializers.file_schema import FileSchema
 from file_service import logging
 
@@ -19,8 +20,15 @@ ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
 
 
 def binary_search(file_hashes, hash_value):
-    """Binary search algorithm in order to identify if file with such content already in DB"""
-    if type(file_hashes) not in (tuple, list) or type(hash_value) != str:
+    """
+    Binary search algorithm in order to identify if file with such content already in DB
+    Args:
+        file_hashes (list):
+        hash_value (str)
+    Returns:
+        True if hash found, False otherwise
+    """
+    if not (isinstance(file_hashes, (list, tuple)) or not isinstance(hash_value, str)):
         raise TypeError('Type Error: file_hashes should be iterable object (list/tuple)\n\
                                      hash_value should be string')
 
@@ -47,22 +55,28 @@ def allowed_file(filename):
 
 
 def extract_headers(file_path):
-    """Function for extracting filters from file by it's path"""
-    filters = []
+    """
+    Function for extracting headers from file by it's path
+    Args:
+        file_path (str):
+    Returns:
+        list of headers
+    """
+    headers = []
 
     try:
         with open(file_path) as csv_file:
 
             csv_reader = csv.reader(csv_file, delimiter=',')
 
-            filters = [filter.capitalize() for filter in list(csv_reader)[0]]
+            headers = [header.capitalize() for header in list(csv_reader)[0]]
 
-            logging.info(f'From ||{file_path}|| extracted filters: {filters}\n')
+            logging.info(f'From ||{file_path}|| extracted headers: {headers}\n')
 
     except FileNotFoundError:
         logging.error(f'Error with opening file by path: || {file_path} ||, not found')
 
-    return filters
+    return headers
 
 
 class FileLoading(Resource):
@@ -75,10 +89,16 @@ class FileLoading(Resource):
 
     @staticmethod
     def generate_hash(file_content):
-        """Function for generating hash value based on file content"""
+        """
+        Function for generating hash value based on file content
+        Args:
+            file_content (buffer)
+        Returns:
+            hash string
+        """
         sha256_hash = hashlib.sha256()
-        piece_size  = 65536
-        byte_line   = ''
+        piece_size = 65536
+        byte_line = ''
 
         try:
             byte_line = file_content.read(piece_size)
@@ -96,7 +116,14 @@ class FileLoading(Resource):
 
     @staticmethod
     def check_for_unique(file_hash, file_size):
-        """Function to identify if file is unique"""
+        """
+        Function to identify if file is unique
+        Args:
+            file_hash (str):
+            file_size (int):
+        Returns:
+            True if file unique, str file path otherwise
+        """
 
         possible_files = [file_instance for file_instance in
                           File.query.filter_by(file_size=file_size)]
@@ -120,7 +147,15 @@ class FileLoading(Resource):
 
     @staticmethod
     def generate_meta_and_headers(file_instance):
-        """Function for generating meta-data and headers of loaded dataset"""
+        """
+        Function for generating meta-data and headers of loaded dataset
+        Args:
+            file_instance (buffer)
+        Returns:
+            tuple of lists
+                1) list of file metadata
+                2) list of headers of dataset
+        """
 
         file_size = len(file_instance.read())
 
@@ -143,7 +178,11 @@ class FileLoading(Resource):
 
     @staticmethod
     def add_file_to_db(file):
-        """Function for adding file to database"""
+        """
+        Function for adding file to database
+        Args:
+            file (File):
+        """
         if not isinstance(file, File):
             raise TypeError('file should be a File instance.')
 
@@ -151,8 +190,11 @@ class FileLoading(Resource):
         DB.session.commit()
 
     def get(self):
+        """GET method for getting list of all files in DB"""
+
         file_schema = FileSchema(many=True)
 
+        print('before query')
         all_files = File.query.all()
 
         result = file_schema.dump(all_files)
@@ -164,6 +206,7 @@ class FileLoading(Resource):
             status.HTTP_200_OK)
 
     def post(self):
+        """POST method for loading user's file into DB"""
 
         if 'user_file' not in request.files:
             return redirect(request.url)
@@ -172,16 +215,16 @@ class FileLoading(Resource):
         if file.filename == '' or not allowed_file(file.filename):
             return redirect(request.url)
 
-        meta        = FileLoading.generate_meta_and_headers(file)
+        meta = FileLoading.generate_meta_and_headers(file)
 
-        input_file  = File(*meta[0])
+        input_file = File(*meta[0])
 
         file_schema = FileSchema()
 
         FileLoading.add_file_to_db(input_file)
 
         filters = meta[1]
-        data    = file_schema.dump(input_file)
+        data = file_schema.dump(input_file)
 
         return make_response(
             jsonify({
@@ -190,13 +233,10 @@ class FileLoading(Resource):
             }),
             status.HTTP_201_CREATED)
 
-    def __str__(self):
-        return 'Class FileLoading - initilized'
-
-
 
 def file_finding_handler(resource_method):
-    """Decorator for handling exceptions in resource methods"""
+    """Decorator function for resource methods"""
+    @wraps(resource_method)
     def wrapper(*args, **kwargs):
         response = resource_method(args, kwargs['file_id'])
 
@@ -223,7 +263,11 @@ class FileInterface(FileLoading):
 
     @staticmethod
     def delete_file_from_db(file):
-        """Function for deleting file from database"""
+        """
+        Function for deleting file from database
+        Args:
+            file (File):
+        """
         if not isinstance(file, File):
             logging.error('file is not instance of File model')
             raise TypeError
@@ -233,7 +277,7 @@ class FileInterface(FileLoading):
 
     @file_finding_handler
     def get(self, file_id):
-
+        """GET method for getting file path by specific file_id"""
         requested_file = File.query.filter_by(id=file_id).first()
 
         try:
@@ -252,7 +296,7 @@ class FileInterface(FileLoading):
 
     @file_finding_handler
     def delete(self, file_id):
-
+        """DELETE method for deleting file from db by specific file_id"""
         requested_file_to_delete = File.query.filter_by(id=file_id).first()
 
         try:

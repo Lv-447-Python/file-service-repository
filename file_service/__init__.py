@@ -9,6 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
 from flask import Flask
 
+
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s: %(name)s | %(levelname)s: %(message)s')
 # in common library !!!
