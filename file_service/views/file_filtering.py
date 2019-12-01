@@ -103,39 +103,47 @@ class FileFiltering(Resource):
                         resulted_str += filter_data[key]
                     else:  # input with count
                         try:
-                            resulted_str += '{' + str(filter_data[key]) + '}'
+                            count = str(filter_data[key]) if str(filter_data[key]) != '' else data_frame_size
+                            resulted_str += '{' + str(count) + '}'
                         except ValueError:
                             logging.error('Field expected to be string type')
 
-                if resulted_str == '':
-                    continue
+            if resulted_str == '':
+                continue
 
-                query_parts = FileFiltering.parse_query_string(resulted_str)
+            query_parts = FileFiltering.parse_query_string(resulted_str)
 
-                if isinstance(query_parts, str):
-                    filtered_result = data_frame.query(f"""{header} == '{query_parts}'""")
-                    indexes.append(set(filtered_result.index))
-                else:
-                    partials = []
-                    for part in query_parts:
-                        if isinstance(part, str):
+            if isinstance(query_parts, tuple):
+                value, count, is_percent = query_parts
 
-                            filtered_result = data_frame.query(f"""{header} == '{part}'""")
+                rows_count = count if not is_percent else int(count * data_frame_size / 100)
 
-                            partials.append(filtered_result)
-                        else:
-                            value, count, is_percent = part
-                            rows_count = count if not is_percent else int(count * data_frame_size / 100)
+                filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
 
-                            filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
-                            partials.append(filtered_result)
+                indexes.append(set(filtered_result.index))
 
-                    if len(partials) > 0:
-                        indexes.append(set(pd.concat(partials).index))
+            else:
+                partials = []
+                for part in query_parts:
 
-            resulted_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+                    if isinstance(part, str):
 
-            return data_frame.loc[resulted_indexes]
+                        filtered_result = data_frame.query(f"""{header} == '{part}'""")
+
+                        partials.append(filtered_result)
+                    else:
+                        value, count, is_percent = part
+                        rows_count = count if not is_percent else int(count * data_frame_size / 100)
+
+                        filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
+                        partials.append(filtered_result)
+
+                if len(partials) > 0:
+                    indexes.append(set(pd.concat(partials).index))
+
+        resulted_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+
+        return data_frame.loc[resulted_indexes]
 
     @file_finding_handler
     def get(self, file_id):
