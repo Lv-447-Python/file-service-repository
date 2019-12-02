@@ -16,7 +16,7 @@ from file_service.serializers.file_schema import FileSchema
 from file_service import logging
 
 
-ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
+ALLOWED_EXTENSIONS = ('csv', 'xls', 'xlsx')
 
 
 def binary_search(file_hashes, hash_value):
@@ -50,8 +50,14 @@ def binary_search(file_hashes, hash_value):
 
 
 def allowed_file(filename):
-    """Function for checking file extension"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    """
+    Function for checking file extension
+    Args:
+        filename (str)
+    Returns:
+        True if file extension is allowed, False otherwise
+    """
+    return filename.endswith(ALLOWED_EXTENSIONS)
 
 
 def extract_headers(file_path):
