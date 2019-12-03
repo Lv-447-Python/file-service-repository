@@ -8,9 +8,10 @@ from flask_api import status
 from flask_restful import Resource
 
 from file_service import API
-from file_service import logging
+
 from file_service.views.index import extract_headers, file_finding_handler
 from file_service.models.file import File
+from file_service.logger.logger import LOGGER
 
 
 class FileFiltering(Resource):
@@ -82,7 +83,7 @@ class FileFiltering(Resource):
         try:
             data_frame = pd.read_csv(file_path, dtype=str)
         except ValueError:
-            logging.error(f'Error to read file as csv by path: {file_path}')
+            LOGGER.error(f'Error to read file as csv by path: {file_path}')
 
         data_frame.columns = [cols.capitalize() for cols in data_frame]
 
@@ -106,7 +107,7 @@ class FileFiltering(Resource):
                             count = str(filter_data[key]) if str(filter_data[key]) != '' else data_frame_size
                             resulted_str += '{' + str(count) + '}'
                         except ValueError:
-                            logging.error('Field expected to be string type')
+                            LOGGER.error('Field expected to be string type')
 
             if resulted_str == '':
                 continue
@@ -166,7 +167,7 @@ class FileFiltering(Resource):
             return response
 
         except AttributeError:
-            logging.error(f'File with id: {file_id}, not found')
+            LOGGER.error(f'File with id: {file_id}, not found')
             return None
 
     @file_finding_handler
@@ -198,7 +199,7 @@ class FileFiltering(Resource):
             return response
 
         except AttributeError:
-            logging.error(f'File with id: {file_id}, not found')
+            LOGGER.error(f'File with id: {file_id}, not found')
             return None
 
     @file_finding_handler
@@ -225,7 +226,7 @@ class FileFiltering(Resource):
                 status.HTTP_200_OK
             )
         except AttributeError:
-            logging.error(f'File with id: {file_id}, not found')
+            LOGGER.error(f'File with id: {file_id}, not found')
             return None
 
         return response

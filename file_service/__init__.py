@@ -1,7 +1,6 @@
 """
 Module for initialization basic modules and instances for whole project
 """
-import logging
 from flask_marshmallow import Marshmallow
 from flask_script import Manager
 from flask_restful import Api
@@ -10,8 +9,6 @@ from flask_migrate import Migrate, MigrateCommand
 from flask import Flask
 
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s: %(name)s | %(levelname)s: %(message)s')
 # in common library !!!
 POSTGRES = {
     'user': 'postgres',

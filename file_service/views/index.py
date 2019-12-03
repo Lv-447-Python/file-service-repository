@@ -13,8 +13,7 @@ from werkzeug.utils import secure_filename, redirect
 
 from file_service import APP, DB, API, File
 from file_service.serializers.file_schema import FileSchema
-from file_service import logging
-
+from file_service.logger.logger import LOGGER
 
 ALLOWED_EXTENSIONS = ('csv', 'xls', 'xlsx')
 
@@ -77,10 +76,10 @@ def extract_headers(file_path):
 
             headers = [header.capitalize() for header in list(csv_reader)[0]]
 
-            logging.info(f'From ||{file_path}|| extracted headers: {headers}\n')
+            LOGGER.info(f'From ||{file_path}|| extracted headers: {headers}\n')
 
     except FileNotFoundError:
-        logging.error(f'Error with opening file by path: || {file_path} ||, not found')
+        LOGGER.error(f'Error with opening file by path: || {file_path} ||, not found')
 
     return headers
 
@@ -108,9 +107,9 @@ class FileLoading(Resource):
 
         try:
             byte_line = file_content.read(piece_size)
-            logging.info('File read correctly')
+            LOGGER.info('File read correctly')
         except TypeError:
-            logging.error('Type Error: can read only string(byte-like) objects')
+            LOGGER.error('Type Error: can read only string(byte-like) objects')
 
         while len(byte_line) > 0:
             sha256_hash.update(byte_line)
@@ -135,18 +134,18 @@ class FileLoading(Resource):
                           File.query.filter_by(file_size=file_size)]
 
         if len(possible_files) == 0:
-            logging.info('File is unique')
+            LOGGER.info('File is unique')
             result = True
         else:
             possible_files_hashes = [file.file_hash for file in possible_files]
             if binary_search(sorted(possible_files_hashes), file_hash):
                 exist_file = [existed for existed in File.query.filter_by(file_hash=file_hash)]
 
-                logging.info(f'File already in DB, so set with path: {exist_file[0].file_path}')
+                LOGGER.info(f'File already in DB, so set with path: {exist_file[0].file_path}')
 
                 result = exist_file[0].file_path
             else:
-                logging.info('File is unique')
+                LOGGER.info('File is unique')
                 result = True
 
         return result
@@ -275,7 +274,7 @@ class FileInterface(FileLoading):
             file (File):
         """
         if not isinstance(file, File):
-            logging.error('file is not instance of File model')
+            LOGGER.error('file is not instance of File model')
             raise TypeError
 
         DB.session.delete(file)
@@ -297,7 +296,7 @@ class FileInterface(FileLoading):
             return result
 
         except AttributeError:
-            logging.error(f'File with id: {file_id}, not found')
+            LOGGER.error(f'File with id: {file_id}, not found')
             return None
 
     @file_finding_handler
