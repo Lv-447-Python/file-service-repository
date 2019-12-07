@@ -3,6 +3,7 @@ Module for initialization basic modules and instances for whole project
 """
 from flask_marshmallow import Marshmallow
 from flask_script import Manager
+from flask_cors import CORS
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
@@ -19,6 +20,7 @@ POSTGRES = {
 }
 
 APP = Flask(__name__)
+CORS(APP)
 
 API = Api(APP)
 

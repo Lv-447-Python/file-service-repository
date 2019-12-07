@@ -93,25 +93,30 @@ class FileFiltering(Resource):
 
         for header in headers:
             resulted_str = ''
+            current_key_number = 1
 
             for key in filter_data:
-                if header in key:
-                    is_value = 'value' in key
-                    if is_value:  # input with value
-                        if resulted_str:
-                            resulted_str += '&'
+                if filter_data[key] == '':
+                    continue
 
-                        resulted_str += filter_data[key]
-                    else:  # input with count
+                if header in key:
+                    if int(key.split(header)[1][0]) != current_key_number:
+                        current_key_number += 1
+                        resulted_str += '&'
+
+                    is_count = 'count' in key
+                    if is_count:  # input with value
                         try:
                             count = str(filter_data[key]) if str(filter_data[key]) != '' else data_frame_size
-                            resulted_str += '{' + str(count) + '}'
                         except ValueError:
                             LOGGER.error('Field expected to be string type')
+                        resulted_str += '{' + str(count) + '}'
+                    else:  # input with count
+                        resulted_str += filter_data[key]
 
             if resulted_str == '':
                 continue
-
+            LOGGER.info(resulted_str)
             query_parts = FileFiltering.parse_query_string(resulted_str)
 
             if isinstance(query_parts, tuple):
@@ -122,7 +127,11 @@ class FileFiltering(Resource):
                 filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
 
                 indexes.append(set(filtered_result.index))
+            elif isinstance(query_parts, str):
 
+                filtered_result = data_frame.query(f"""{header} == '{query_parts}'""")
+
+                indexes.append(set(filtered_result.index))
             else:
                 partials = []
                 for part in query_parts:

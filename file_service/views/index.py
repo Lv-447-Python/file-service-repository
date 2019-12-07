@@ -64,7 +64,7 @@ def extract_headers(file_path):
     Function for extracting headers from file by it's path
     Args:
         file_path (str):
-    Returns:
+    Returns:+
         list of headers
     """
     headers = []
