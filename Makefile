@@ -17,7 +17,6 @@ clean:
 	rm -rf $(VENV_NAME) $(MIGRATE_FOLDER)
 
 init_db:
-	createdb -U postgres statcrutch
 	${PYTHON} manage.py db init
 	${PYTHON} manage.py db upgrade
 	${PYTHON} manage.py db migrate

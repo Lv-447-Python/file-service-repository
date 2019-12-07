@@ -14,7 +14,7 @@ from flask import Flask
 POSTGRES = {
     'user': 'postgres',
     'pw': '',
-    'db': 'statcrutch',
+    'db': 'filedb',
     'host': 'db',
     'port': '5432',
 }
