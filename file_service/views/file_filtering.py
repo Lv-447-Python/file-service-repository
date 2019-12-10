@@ -89,7 +89,7 @@ class FileFiltering(Resource):
 
         data_frame_size = data_frame.shape[0]
 
-        indexes = [data_frame.index]
+        indexes = []
 
         for header in headers:
             resulted_str = ''
@@ -122,16 +122,16 @@ class FileFiltering(Resource):
             if isinstance(query_parts, tuple):
                 value, count, is_percent = query_parts
 
-                rows_count = count if not is_percent else int(count * data_frame_size / 100)
+                filtered_result = data_frame.query(f"""{header} == '{value}'""")
 
-                filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
+                rows_count = count if not is_percent else int(count * len(filtered_result) / 100)
 
-                indexes.append(set(filtered_result.index))
+                indexes.append((set(filtered_result.index), rows_count))
             elif isinstance(query_parts, str):
 
                 filtered_result = data_frame.query(f"""{header} == '{query_parts}'""")
 
-                indexes.append(set(filtered_result.index))
+                indexes.append((set(filtered_result.index), data_frame_size))
             else:
                 partials = []
                 for part in query_parts:
@@ -143,17 +143,27 @@ class FileFiltering(Resource):
                         partials.append(filtered_result)
                     else:
                         value, count, is_percent = part
-                        rows_count = count if not is_percent else int(count * data_frame_size / 100)
 
-                        filtered_result = data_frame.query(f"""{header} == '{value}'""")[:rows_count]
-                        partials.append(filtered_result)
+                        filtered_result = data_frame.query(f"""{header} == '{value}'""")
+
+                        rows_count = count if not is_percent else int(count * len(filtered_result) / 100)
+
+                        partials.append(filtered_result[:rows_count])
 
                 if len(partials) > 0:
-                    indexes.append(set(pd.concat(partials).index))
+                    concatenated_indexes = pd.concat(partials).index
+                    indexes.append((set(concatenated_indexes), len(concatenated_indexes)))
 
-        resulted_indexes = list(reduce(lambda current, next_one: current & next_one, indexes))
+        sorted_indexes = sorted(indexes, key=lambda x: x[1], reverse=True)
+        LOGGER.info(sorted_indexes)
 
-        return data_frame.loc[resulted_indexes]
+        for index_list in sorted_indexes:
+            working_indexes, working_amount = index_list
+
+            LOGGER.info(f'Indexes: {working_indexes}, AMOUNT: {working_amount}')
+            data_frame = data_frame.loc[data_frame.index & working_indexes][:working_amount]
+
+        return data_frame
 
     @file_finding_handler
     def get(self, file_id):

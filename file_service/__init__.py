@@ -9,12 +9,11 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
 from flask import Flask
 
-
 # in common library !!!
 POSTGRES = {
     'user': 'postgres',
     'pw': '',
-    'db': 'filedb',
+    'db': 'statcrutch',
     'host': 'db',
     'port': '5432',
 }

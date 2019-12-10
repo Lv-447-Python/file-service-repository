@@ -19,6 +19,9 @@ services:
     command: >
       /bin/bash -c "
         sleep 20;
+        python manage.py db init;
+        python manage.py db upgrade;
+        python manage.py db migrate;
         python manage.py db upgrade"
     volumes:
       - .:/file_service
