@@ -14,16 +14,27 @@ $(VENV_NAME)/bin/activate: requirements.txt
 	make init_db
 
 clean:
-	rm -rf $(VENV_NAME) $(MIGRATE_FOLDER)
+	rm -rf $(VENV_NAME) $(MIGRATION_FOLDER)
 
 init_db:
-	${PYTHON} manage.py db init
-	${PYTHON} manage.py db upgrade
-	${PYTHON} manage.py db migrate
-	${PYTHON} manage.py db upgrade
+	if [ ! -d ${MIGRATION_FOLDER} ] ; then \
+		${PYTHON} manage.py db init; \
+		${PYTHON} manage.py db upgrade; \
+		${PYTHON} manage.py db migrate; \
+		${PYTHON} manage.py db upgrade; \
+	else \
+		${PYTHON} manage.py db upgrade; \
+		${PYTHON} manage.py db migrate; \
+		${PYTHON} manage.py db upgrade; \
+	fi
+
 
 lint:
 	${PYTHON} -m pylint file_service
 
 test:
 	${PYTHON} -m pytest tests/BaseTest.py
+
+coverage:
+	env/bin/coverage run --omit env\* -m unittest discover
+	env/bin/coverage report -m
