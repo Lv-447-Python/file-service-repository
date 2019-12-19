@@ -2,6 +2,7 @@
 from functools import reduce
 import json
 import pandas as pd
+import requests
 
 from flask import jsonify, request, make_response
 from flask_api import status
@@ -235,15 +236,25 @@ class FileFiltering(Resource):
 
             resulted_indexes = FileFiltering.filter_dataset(current_file_path, current_file_headers,
                                                             form_data).index
-
-            response = make_response(
-                jsonify({
+            LOGGER.info('Before request')
+            save_to_history_response = requests.post(
+                url='http://web-history:5000/history',
+                json={
                     'file_id': file_id,
-                    'filter_values': form_data,
-                    'resulted_indexes': resulted_indexes
-                }),
-                status.HTTP_200_OK
+                    'filter_data': form_data,
+                    'rows_id': list(resulted_indexes)
+                }
             )
+            LOGGER.info('After request')
+
+            history_status = save_to_history_response.status_code
+
+            message = 'Successfully saved to history' if history_status == 201 else 'Can not save to history'
+            response = make_response(
+                jsonify({'message': message}),
+                history_status
+            )
+
         except AttributeError:
             LOGGER.error(f'File with id: {file_id}, not found')
             return None
