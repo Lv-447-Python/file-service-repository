@@ -18,14 +18,14 @@ clean:
 
 init_db:
 	if [ ! -d ${MIGRATION_FOLDER} ] ; then \
-		${PYTHON} manage.py db init; \
-		${PYTHON} manage.py db upgrade; \
-		${PYTHON} manage.py db migrate; \
-		${PYTHON} manage.py db upgrade; \
+		python3 manage.py db init; \
+		python3 manage.py db upgrade; \
+		python3 manage.py db migrate; \
+		python3 manage.py db upgrade; \
 	else \
-		${PYTHON} manage.py db upgrade; \
-		${PYTHON} manage.py db migrate; \
-		${PYTHON} manage.py db upgrade; \
+		python3 manage.py db upgrade; \
+		python3 manage.py db migrate; \
+		python3 manage.py db upgrade; \
 	fi
 
 

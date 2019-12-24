@@ -226,6 +226,7 @@ class FileFiltering(Resource):
     def post(self, file_id):
         """POST method for saving filtered data set into history"""
         form_data = request.form
+        session = request.cookies['session']
 
         requested_file = File.query.filter_by(id=file_id).first()
 
@@ -239,12 +240,14 @@ class FileFiltering(Resource):
             LOGGER.info('Before request')
             save_to_history_response = requests.post(
                 url='http://web-history:5000/history',
+                cookies={'session': session},
                 json={
                     'file_id': file_id,
                     'filter_data': form_data,
                     'rows_id': list(resulted_indexes)
                 }
             )
+            LOGGER.info(session)
             LOGGER.info('After request')
 
             history_status = save_to_history_response.status_code

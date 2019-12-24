@@ -19,7 +19,7 @@ POSTGRES = {
 }
 
 APP = Flask(__name__)
-CORS(APP)
+CORS(APP, supports_credentials=True)
 
 API = Api(APP)
 

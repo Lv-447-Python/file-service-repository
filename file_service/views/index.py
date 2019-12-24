@@ -222,7 +222,9 @@ class FileLoading(Resource):
 
         meta = FileLoading.generate_meta_and_headers(file)
 
+        LOGGER.info('Before creating FILE instance')
         input_file = File(*meta[0])
+        LOGGER.info('AFTER  CREATING FILE INSTANCE')
 
         file_schema = FileSchema()
 
