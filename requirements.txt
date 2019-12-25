@@ -8,6 +8,7 @@ blinker==1.4
 certifi==2019.9.11
 chardet==3.0.4
 Click==7.0
+coverage==5.0.1
 Flask==1.1.1
 Flask-API==1.1
 Flask-BabelEx==0.9.3
