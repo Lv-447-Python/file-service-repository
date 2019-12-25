@@ -1,4 +1,4 @@
-"""Initial Point of starting File Service"""
+"""Initial Point of starting File Service (NOT FOR PRODUCTION DEPLOYMENT)"""
 
 from file_service import APP
 
