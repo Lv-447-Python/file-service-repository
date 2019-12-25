@@ -40,5 +40,5 @@ test: ## Test service.
 	${PYTHON_LOCAL} -m pytest tests/BaseTest.py
 
 coverage: ## Run coverage for service.
-	${PYTHON_LOCAL} -m coverage run --omit env\* -m pytest discover
+	${PYTHON_LOCAL} -m coverage run --omit env\* -m unittest discover
 	${PYTHON_LOCAL} -m coverage report -m
