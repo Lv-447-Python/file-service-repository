@@ -1,40 +1,44 @@
-.PHONY: help setup init_db run test lint
+.PHONY: help setup_env setup_docker clean run_docker lint test coverage
 
 VENV_NAME?=env
-PYTHON=${VENV_NAME}/bin/python3
 MIGRATION_FOLDER?=migrations
+PYTHON_LOCAL=python
+PYTHON_ENV=${VENV_NAME}/bin/python
 
-setup: $(VENV_NAME)/bin/activate
-$(VENV_NAME)/bin/activate: requirements.txt
-	make clean
-	test -d $(VENV_NAME) || python3 -m virtualenv $(VENV_NAME)
-	mkdir files
-	${PYTHON} -m pip install -U pip
-	${PYTHON} -m pip install -r requirements.txt
-	make init_db
+.DEFAULT: help
+help: ## Show this help.
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-clean:
+setup_env: $(VENV_NAME)/bin/activate ## Prepare virtual environment.
+$(VENV_NAME)/bin/activate: requirements.txt | clean
+	test -d $(VENV_NAME) || ${PYTHON_LOCAL} -m virtualenv $(VENV_NAME)
+	mkdir -p files
+	${PYTHON_ENV} -m pip install -U pip
+	${PYTHON_ENV} -m pip install -r requirements.txt
+
+setup_docker: clean ## Prepare service in Docker container.
+	mkdir -p files
+	${PYTHON_LOCAL} -m pip install -U pip
+	${PYTHON_LOCAL} -m pip install -r requirements.txt
+
+clean: ## Delete virtual environment and migration folders.
 	rm -rf $(VENV_NAME) $(MIGRATION_FOLDER)
 
-init_db:
-	if [ ! -d ${MIGRATION_FOLDER} ] ; then \
-		python3 manage.py db init; \
-		python3 manage.py db upgrade; \
-		python3 manage.py db migrate; \
-		python3 manage.py db upgrade; \
-	else \
-		python3 manage.py db upgrade; \
-		python3 manage.py db migrate; \
-		python3 manage.py db upgrade; \
-	fi
+run_docker: | $(MIGRATION_FOLDER) ## Run service in Docker container.
+	${PYTHON_LOCAL} run.py
 
+$(MIGRATION_FOLDER):
+	${PYTHON_LOCAL} manage.py db init
+	${PYTHON_LOCAL} manage.py db upgrade
+	${PYTHON_LOCAL} manage.py db migrate
+	${PYTHON_LOCAL} manage.py db upgrade
 
-lint:
-	${PYTHON} -m pylint file_service
+lint: ## Check code using pylint.
+	${PYTHON_ENV} -m pylint file_service
 
-test:
-	${PYTHON} -m pytest tests/BaseTest.py
+test: ## Test service.
+	${PYTHON_LOCAL} -m pytest tests/BaseTest.py
 
-coverage:
-	env/bin/coverage run --omit env\* -m unittest discover
-	env/bin/coverage report -m
+coverage: ## Run coverage for service.
+	${PYTHON_LOCAL} -m coverage run --omit env\* -m pytest discover
+	${PYTHON_LOCAL} -m coverage report -m
