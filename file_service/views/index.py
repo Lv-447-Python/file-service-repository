@@ -76,10 +76,10 @@ def extract_headers(file_path):
 
             headers = [header.capitalize() for header in list(csv_reader)[0]]
 
-            LOGGER.info(f'From ||{file_path}|| extracted headers: {headers}\n')
+            LOGGER.info('From ||%s|| extracted headers: %s\n', file_path, headers)
 
     except FileNotFoundError:
-        LOGGER.error(f'Error with opening file by path: || {file_path} ||, not found')
+        LOGGER.error('Error with opening file by path: || %s ||, not found', file_path)
 
     return headers
 
@@ -88,8 +88,8 @@ class FileLoading(Resource):
     """
     Resource for working with files
     methods:
-        GET:  localhost:/files ==> return all files meta-data
-        POST: localhost:/files ==> (with request file) load file to DB and show user meta-data and headers
+        GET:  localhost:/file-service/api/files ==> return all files meta-data
+        POST: localhost:/file-service/api/files ==> (with request file) load file to DB and show user meta-data and headers
     """
 
     @staticmethod
@@ -141,7 +141,7 @@ class FileLoading(Resource):
             if binary_search(sorted(possible_files_hashes), file_hash):
                 exist_file = [existed for existed in File.query.filter_by(file_hash=file_hash)]
 
-                LOGGER.info(f'File already in DB, so set with path: {exist_file[0].file_path}')
+                LOGGER.info('File already in DB, so set with path: %s', exist_file[0].file_path)
 
                 result = exist_file[0].file_path
             else:
@@ -263,9 +263,9 @@ class FileInterface(FileLoading):
     """
     Resource for working with single file
     methods:
-        GET:  localhost:/file/<file_id:int> ==> return file path by requested file_id
-        PUT:  localhost:/file/<file_id:int> ==> filter data frame by requested form values
-        POST: localhost:/file/<file_id:int> ==> save filtered data frame and requested form values
+        GET:  localhost:/file-service/api/file/<file_id:int> ==> return file path by requested file_id
+        PUT:  localhost:/file-service/api/file/<file_id:int> ==> filter data frame by requested form values
+        POST: localhost:/file-service/api/file/<file_id:int> ==> save filtered data frame and requested form values
     """
 
     @staticmethod
@@ -276,7 +276,7 @@ class FileInterface(FileLoading):
             file (File):
         """
         if not isinstance(file, File):
-            LOGGER.error('file is not instance of File model')
+            LOGGER.error('File is not instance of File model')
             raise TypeError
 
         DB.session.delete(file)
@@ -298,7 +298,7 @@ class FileInterface(FileLoading):
             return result
 
         except AttributeError:
-            LOGGER.error(f'File with id: {file_id}, not found')
+            LOGGER.error('File with id: %s, not found', file_id)
             return None
 
     @file_finding_handler
@@ -320,5 +320,5 @@ class FileInterface(FileLoading):
             return None
 
 
-API.add_resource(FileLoading, '/files')
-API.add_resource(FileInterface, '/file/<int:file_id>')
+API.add_resource(FileLoading, '/file-service/api/files')
+API.add_resource(FileInterface, '/file-service/api/file/<int:file_id>')

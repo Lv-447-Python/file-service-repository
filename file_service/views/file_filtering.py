@@ -1,5 +1,4 @@
 """File filtering module"""
-from functools import reduce
 import json
 import pandas as pd
 import requests
@@ -19,9 +18,9 @@ class FileFiltering(Resource):
     """
     Resource for filtering loaded data set
     methods:
-        GET: host/file/<int:file_id>  ==> return file metadata by file_id
-        PUT: host/file/<int:file_id>  ==> return filtered dataset
-        POST: host/file/<int:file_id> ==> return filtered dataset id's and form values
+        GET: host/file-service/api/file/<int:file_id>  ==> return file metadata by file_id
+        PUT: host/file-service/api/file/<int:file_id>  ==> return filtered dataset
+        POST: host/file-service/api/file/<int:file_id> ==> return filtered dataset id's and form values
     """
 
     @staticmethod
@@ -84,7 +83,7 @@ class FileFiltering(Resource):
         try:
             data_frame = pd.read_csv(file_path, dtype=str)
         except ValueError:
-            LOGGER.error(f'Error to read file as csv by path: {file_path}')
+            LOGGER.error('Error to read file as csv by path: %s', file_path)
 
         data_frame.columns = [cols.capitalize() for cols in data_frame]
 
@@ -161,7 +160,7 @@ class FileFiltering(Resource):
         for index_list in sorted_indexes:
             working_indexes, working_amount = index_list
 
-            LOGGER.info(f'Indexes: {working_indexes}, AMOUNT: {working_amount}')
+            LOGGER.info('Indexes: %s, AMOUNT: %s', working_indexes, working_amount)
             data_frame = data_frame.loc[data_frame.index & working_indexes][:working_amount]
 
         return data_frame
@@ -187,7 +186,7 @@ class FileFiltering(Resource):
             return response
 
         except AttributeError:
-            LOGGER.error(f'File with id: {file_id}, not found')
+            LOGGER.error('File with id: %s, not found', file_id)
             return None
 
     @file_finding_handler
@@ -219,7 +218,7 @@ class FileFiltering(Resource):
             return response
 
         except AttributeError:
-            LOGGER.error(f'File with id: {file_id}, not found')
+            LOGGER.error('File with id: %s, not found', file_id)
             return None
 
     @file_finding_handler
@@ -239,7 +238,7 @@ class FileFiltering(Resource):
                                                             form_data).index
             LOGGER.info('Before request')
             save_to_history_response = requests.post(
-                url='http://web-history:5000/history',
+                url='http://web-history:5000/history-service/api/history',
                 cookies={'session': session},
                 json={
                     'file_id': file_id,
@@ -259,10 +258,10 @@ class FileFiltering(Resource):
             )
 
         except AttributeError:
-            LOGGER.error(f'File with id: {file_id}, not found')
+            LOGGER.error('File with id: %s, not found', file_id)
             return None
 
         return response
 
 
-API.add_resource(FileFiltering, '/filtering/<int:file_id>')
+API.add_resource(FileFiltering, '/file-service/api/filtering/<int:file_id>')
